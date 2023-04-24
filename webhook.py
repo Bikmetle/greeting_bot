@@ -8,7 +8,7 @@ from config import TOKEN, OWNER, DEV
 
 API_TOKEN = TOKEN
 WEBHOOK_HOST = 'https://testwebhookheroku.herokuapp.com'
-WEBHOOK_PATH = f'/{TOKEN}'
+WEBHOOK_PATH = '/'
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 WEBAPP_HOST = '0.0.0.0'
 WEBAPP_PORT = int(os.environ.get('PORT', '8443'))
