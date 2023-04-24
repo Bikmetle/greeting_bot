@@ -7,7 +7,7 @@ from aiogram.utils import executor
 from config import TOKEN, OWNER, DEV
 
 API_TOKEN = TOKEN
-WEBHOOK_HOST = 'https://testwebhookheroku.herokuapp.com/'
+WEBHOOK_HOST = 'https://testwebhookheroku.herokuapp.com'
 WEBHOOK_PATH = f'/{TOKEN}'
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 WEBAPP_HOST = '0.0.0.0'
