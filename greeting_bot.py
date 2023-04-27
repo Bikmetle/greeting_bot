@@ -1,13 +1,14 @@
 import logging
 import os
 import asyncio
-from random import choice, randint, shuffle
+from random import randint, shuffle
 from aiogram import Bot, types, filters
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
-from sql_model import MessageModel, SessionLocal
+from sql_model import MessageModel, Session
 from config import TOKEN, OWNER, DEV, WEBHOOK_HOST, WEBHOOK_PATH, WEBAPP_HOST
+from sqlalchemy import func
 
 
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
@@ -18,6 +19,20 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
+
+
+def get_user_link(message: types.Message):
+    """
+    This function gets user as a link.
+    """
+    id = message.from_user.id
+    username = message.from_user.username
+    full_name = message.from_user.full_name
+    if message.from_user.username is not None:
+        user_link = f"[{id}]\nСообщение от <a href='tg://user?id={id}'>{full_name}</a> @{username}\n"
+    else:
+        user_link = f"[{id}]\nСообщение от <a href='tg://user?id={id}'>{full_name}</a>\n"
+    return user_link
 
 
 def captcha(member):
@@ -125,44 +140,86 @@ async def join_group(message: types.Message):
 chat_filter = filters.ChatTypeFilter(types.ChatType.SUPERGROUP)
 @dp.message_handler(chat_filter)
 async def handle_message(message: types.Message):
+    chat_id = message.chat.id
+    message_id = message.message_id
     user_id = message.from_user.id
     full_name = message.from_user.full_name
     username = message.from_user.username
     text = message.text
     date = message.date
+    user_link = get_user_link(message)
 
-    db = SessionLocal()
-    db_message = MessageModel(
-        user_id=user_id,
-        full_name=full_name,
-        username=username,
-        text=text,
-        date=date
-    )
-    db.add(db_message)
-    db.commit()
-    db.close()
+    session = Session()
+    obj = session.query(MessageModel).filter_by(text=text).first()
+    try:
+        if obj.count:
+            session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
+            session.commit()
+        else:
+            await bot.send_message(chat_id=DEV, text=f"{user_link}{text}", parse_mode="HTML")
+            await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except:
+        db_message = MessageModel(
+            id = message_id,
+            user_id=user_id,
+            full_name=full_name,
+            username=username,
+            text=text,
+            date=date
+        )
+        session.add(db_message)
+        ids_to_delete = [row.id for row in session.query(MessageModel).filter_by(user_id=user_id).all()]
+        while len(ids_to_delete) > 5:
+            id = ids_to_delete.pop(0)
+            obj = session.query(MessageModel).filter_by(id=id)
+            if obj.first().count:
+                continue
+            else:
+                obj.delete()
+        session.commit()
 
 
 @dp.message_handler(content_types=[types.ContentType.PHOTO])
 async def handle_photo(message: types.Message):
+    chat_id = message.chat.id
+    message_id = message.message_id
     user_id = message.from_user.id
     full_name = message.from_user.full_name
     username = message.from_user.username
     file_id = message.photo[-1]['file_unique_id']
+    caption = message.caption
     date = message.date
+    user_link = get_user_link(message)
 
-    db = SessionLocal()
-    db_message = MessageModel(
-        user_id=user_id,
-        full_name=full_name,
-        username=username,
-        file_id=file_id,
-        date=date
-    )
-    db.add(db_message)
-    db.commit()
-    db.close()
+    session = Session()
+    obj = session.query(MessageModel).filter_by(file_id=file_id).first()
+    try:
+        if obj.count:
+            session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
+            session.commit()
+        else:
+            await bot.send_photo(chat_id=DEV, photo=message.photo[-1].file_id, caption=f'{user_link}{caption if caption else ""}', parse_mode="HTML")
+            await bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except:
+        db_message = MessageModel(
+            id = message_id,
+            user_id=user_id,
+            full_name=full_name,
+            username=username,
+            file_id=file_id,
+            date=date
+        )
+        session.add(db_message)
+        ids_to_delete = [row.id for row in session.query(MessageModel).filter_by(user_id=user_id).all()]
+        while len(ids_to_delete) > 5:
+            id = ids_to_delete.pop(0)
+            obj = session.query(MessageModel).filter_by(id=id)
+            if obj.first().count:
+                continue
+            else:
+                obj.delete()
+        session.commit()
+
 
 # if __name__ == '__main__':
     # dp.register_update_handler(ChatMemberUpdated, ChatMembersJoin())
