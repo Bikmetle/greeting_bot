@@ -131,7 +131,7 @@ async def chat_id_msg(message: types.Message):
     await message.reply(f"Chat ID is\n{chat_id}")
 
 
-@dp.message_handler(commands=['status'])
+@dp.message_handler(commands=['status', 'статус'])
 async def status_msg(message: types.Message):
     user_id = message.from_user.id
     if message.reply_to_message and user_id in [OWNER, DEV]:
@@ -140,7 +140,7 @@ async def status_msg(message: types.Message):
             ad_id, _ = ad_id_and_text(message.reply_to_message.text)
             obj = session.query(MessageModel).filter_by(id=ad_id).first()
             user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
-            text=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left'
+            text=f'[{obj.id}].\n{user_link}{obj.text}\nосталось {obj.count}'
             await bot.send_message(chat_id=OWNER, text=text, parse_mode="HTML")
             await bot.send_message(chat_id=DEV, text=text, parse_mode="HTML")
         except:
@@ -148,14 +148,14 @@ async def status_msg(message: types.Message):
             obj = session.query(MessageModel).filter_by(id=ad_id).first()
             user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
             photo=message.reply_to_message.photo[-1].file_id
-            caption=f'[{obj.id}].\n{user_link}{obj.text if obj.text else ""}\n{obj.count} ads left'
+            caption=f'[{obj.id}].\n{user_link}{obj.text if obj.text else ""}\nосталось {obj.count}'
             await bot.send_photo(chat_id=OWNER, photo=photo, caption=caption, parse_mode="HTML")
             await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
         await message.delete()
         await message.reply_to_message.delete()
 
 
-@dp.message_handler(commands=['spam'])
+@dp.message_handler(commands=['spam', 'спам'])
 async def spam_msg(message: types.Message):
     user_id = message.from_user.id
     if message.reply_to_message and user_id in [OWNER, DEV]:
@@ -220,8 +220,9 @@ async def handle_message(message: types.Message):
             session.commit()
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
         else:
-            await bot.send_message(chat_id=OWNER, text=f"[{obj.id}].\n{user_link}{text}\n{obj.count} ads left", parse_mode="HTML")
-            await bot.send_message(chat_id=DEV, text=f"[{obj.id}].\n{user_link}{text}\n{obj.count} ads left", parse_mode="HTML")
+            text=f"[{obj.id}].\n{user_link}{text}\nосталось {obj.count}"
+            await bot.send_message(chat_id=OWNER, text=text, parse_mode="HTML")
+            await bot.send_message(chat_id=DEV, text=text, parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
@@ -263,8 +264,10 @@ async def handle_photo(message: types.Message):
             session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
             session.commit()
         else:
-            await bot.send_photo(chat_id=OWNER, photo=message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{caption if caption else ""}\n{obj.count} ads left', parse_mode="HTML")
-            await bot.send_photo(chat_id=DEV, photo=message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{caption if caption else ""}\n{obj.count} ads left', parse_mode="HTML")
+            photo = message.photo[-1].file_id
+            caption = f'[{obj.id}].\n{user_link}{caption if caption else ""}\nосталсь {obj.count}'
+            await bot.send_photo(chat_id=OWNER, photo=photo, caption=caption, parse_mode="HTML")
+            await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
@@ -299,7 +302,7 @@ async def manage_count(message: types.Message):
                 ad_id, _ = ad_id_and_text(message.reply_to_message.text)
                 obj = session.query(MessageModel).filter_by(id=ad_id).first()
                 user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
-                text=f'[{obj.id}].\n{user_link}{obj.text}\n{new_count} ads left'
+                text=f'[{obj.id}].\n{user_link}{obj.text}\nосталось {new_count}'
                 await bot.send_message(chat_id=OWNER, text=text, parse_mode="HTML")
                 await bot.send_message(chat_id=DEV, text=text, parse_mode="HTML")
             except:
@@ -307,7 +310,7 @@ async def manage_count(message: types.Message):
                 obj = session.query(MessageModel).filter_by(id=ad_id).first()
                 user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
                 photo = message.reply_to_message.photo[-1].file_id
-                caption = f'[{obj.id}].\n{user_link}{obj.text if obj.text else ""}\n{new_count} ads left'
+                caption = f'[{obj.id}].\n{user_link}{obj.text if obj.text else ""}\nосталось {new_count}'
                 await bot.send_photo(chat_id=OWNER, photo=photo, caption=caption, parse_mode="HTML")
                 await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
             session.query(MessageModel).filter_by(id=ad_id).update({'count': new_count})
