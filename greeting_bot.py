@@ -92,7 +92,7 @@ async def process_right_query(query: types.CallbackQuery):
             user_id,
             permissions
         )
-        message = await bot.send_message(chat_id, text=text, parse_mode="HTML")
+        message = await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
         await asyncio.sleep(30)
         await message.delete()
     else:
@@ -133,26 +133,32 @@ async def chat_id_msg(message: types.Message):
 
 @dp.message_handler(commands=['status'])
 async def status_msg(message: types.Message):
-    if message.reply_to_message:
+    user_id = message.from_user.id
+    if message.reply_to_message and user_id in [OWNER, DEV]:
         session = Session()
         try:
             ad_id, _ = ad_id_and_text(message.reply_to_message.text)
             obj = session.query(MessageModel).filter_by(id=ad_id).first()
             user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
-            await message.answer(text=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left', parse_mode="HTML")
+            text=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left'
+            await bot.send_message(chat_id=OWNER, text=text, parse_mode="HTML")
+            await bot.send_message(chat_id=DEV, text=text, parse_mode="HTML")
         except:
             ad_id, _ = ad_id_and_text(message.reply_to_message.caption)
             obj = session.query(MessageModel).filter_by(id=ad_id).first()
             user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
-            await bot.send_photo(chat_id=OWNER, photo=message.reply_to_message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left', parse_mode="HTML")
-            await bot.send_photo(chat_id=DEV, photo=message.reply_to_message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left', parse_mode="HTML")
+            photo=message.reply_to_message.photo[-1].file_id
+            caption=f'[{obj.id}].\n{user_link}{obj.text if obj.text else ""}\n{obj.count} ads left'
+            await bot.send_photo(chat_id=OWNER, photo=photo, caption=caption, parse_mode="HTML")
+            await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
         await message.delete()
         await message.reply_to_message.delete()
 
 
 @dp.message_handler(commands=['spam'])
 async def spam_msg(message: types.Message):
-    if message.reply_to_message:
+    user_id = message.from_user.id
+    if message.reply_to_message and user_id in [OWNER, DEV]:
         try:
             ad_id, _ = ad_id_and_text(message.reply_to_message.text)
         except:
@@ -182,8 +188,10 @@ async def join_group(message: types.Message):
                 permissions
             )
             text, keyboard = captcha(member)
-            await message.answer(text=text, reply_markup=keyboard, parse_mode="HTML")
-    
+            greeting = await message.answer(text=text, reply_markup=keyboard, parse_mode="HTML")
+            await asyncio.sleep(30)
+            await greeting.delete()
+
     except Exception as e:
         await bot.send_message(chat_id=OWNER, text=f'join_group {e}')
         await bot.send_message(chat_id=DEV, text=f'join_group {e}')
@@ -226,7 +234,7 @@ async def handle_message(message: types.Message):
         )
         session.add(db_message)
         ids_to_delete = [row.id for row in session.query(MessageModel).filter_by(user_id=user_id).all()]
-        while len(ids_to_delete) > 5:
+        while len(ids_to_delete) > 10:
             id = ids_to_delete.pop(0)
             obj = session.query(MessageModel).filter_by(id=id)
             if obj.first().count:
@@ -236,7 +244,7 @@ async def handle_message(message: types.Message):
         session.commit()
 
 
-@dp.message_handler(content_types=[types.ContentType.PHOTO])
+@dp.message_handler(chat_filter, content_types=[types.ContentType.PHOTO])
 async def handle_photo(message: types.Message):
     chat_id = message.chat.id
     message_id = message.message_id
@@ -282,18 +290,29 @@ async def handle_photo(message: types.Message):
 
 @dp.message_handler()
 async def manage_count(message: types.Message):
-    if message.reply_to_message:
+    user_id = message.from_user.id
+    if message.reply_to_message and user_id in [OWNER, DEV]:
         try:
             new_count = int(message.text)
+            session = Session()
             try:
                 ad_id, _ = ad_id_and_text(message.reply_to_message.text)
+                obj = session.query(MessageModel).filter_by(id=ad_id).first()
+                user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
+                text=f'[{obj.id}].\n{user_link}{obj.text}\n{new_count} ads left'
+                await bot.send_message(chat_id=OWNER, text=text, parse_mode="HTML")
+                await bot.send_message(chat_id=DEV, text=text, parse_mode="HTML")
             except:
                 ad_id, _ = ad_id_and_text(message.reply_to_message.caption)
-            session = Session()
+                obj = session.query(MessageModel).filter_by(id=ad_id).first()
+                user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
+                photo = message.reply_to_message.photo[-1].file_id
+                caption = f'[{obj.id}].\n{user_link}{obj.text if obj.text else ""}\n{new_count} ads left'
+                await bot.send_photo(chat_id=OWNER, photo=photo, caption=caption, parse_mode="HTML")
+                await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
             session.query(MessageModel).filter_by(id=ad_id).update({'count': new_count})
             session.commit()
             await message.delete()
-            await message.answer(text=f'{new_count} ads left')
         except:
             await message.answer(text='reply to ad msg please')
 
