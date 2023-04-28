@@ -41,6 +41,17 @@ def get_user_link(message: types.Message):
     return user_link
 
 
+def get_user_link_2(user_id, full_name, username):
+    """
+    This function gets user as a link.
+    """
+    if username is not None:
+        user_link = f"[{user_id}]\nСообщение от <a href='tg://user?id={id}'>{full_name}</a> @{username}\n"
+    else:
+        user_link = f"[{user_id}]\nСообщение от <a href='tg://user?id={id}'>{full_name}</a>\n"
+    return user_link
+
+
 def captcha(member):
     keyboard = types.InlineKeyboardMarkup(resize_keyboard=True, row_width=5)
     keyboard_items = [('steak', "🥩"), ('kiwi', "🥝"), ('milk', "🥛"), ('bacon', "🥓"),
@@ -98,11 +109,13 @@ async def process_wrong_query(query: types.CallbackQuery):
 
 async def on_startup(dp):
     await bot.set_webhook(WEBHOOK_URL)
+    await bot.send_message(chat_id=OWNER, text='Bot has been started')
     await bot.send_message(chat_id=DEV, text='Bot has been started')
 
 
 async def on_shutdown(dp):
     logging.warning('Shutting down..')
+    await bot.send_message(chat_id=OWNER, text='Bot has been stopped')
     await bot.send_message(chat_id=DEV, text='Bot has been stopped')
     logging.warning('Bye!')
 
@@ -121,14 +134,20 @@ async def chat_id_msg(message: types.Message):
 @dp.message_handler(commands=['status'])
 async def status_msg(message: types.Message):
     if message.reply_to_message:
+        session = Session()
         try:
             ad_id, _ = ad_id_and_text(message.reply_to_message.text)
+            obj = session.query(MessageModel).filter_by(id=ad_id).first()
+            user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
+            await message.answer(text=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left', parse_mode="HTML")
         except:
             ad_id, _ = ad_id_and_text(message.reply_to_message.caption)
-        session = Session()
-        obj = session.query(MessageModel).filter_by(id=ad_id).first()
+            obj = session.query(MessageModel).filter_by(id=ad_id).first()
+            user_link = get_user_link_2(obj.user_id, obj.full_name, obj.username)
+            await bot.send_photo(chat_id=OWNER, photo=message.reply_to_message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left', parse_mode="HTML")
+            await bot.send_photo(chat_id=DEV, photo=message.reply_to_message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{obj.text}\n{obj.count} ads left', parse_mode="HTML")
         await message.delete()
-        await message.answer(text=f'{obj.count} ads left')
+        await message.reply_to_message.delete()
 
 
 @dp.message_handler(commands=['spam'])
@@ -143,7 +162,6 @@ async def spam_msg(message: types.Message):
         session.query(MessageModel).filter_by(id=ad_id).update({'count': -1})
         session.commit()
         await message.delete()
-        await message.answer(text='spammer')
 
 
 @dp.message_handler(content_types=["new_chat_members"])
@@ -194,7 +212,8 @@ async def handle_message(message: types.Message):
             session.commit()
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
         else:
-            await bot.send_message(chat_id=DEV, text=f"[{obj.id}].\n{user_link}{text}", parse_mode="HTML")
+            await bot.send_message(chat_id=OWNER, text=f"[{obj.id}].\n{user_link}{text}\n{obj.count} ads left", parse_mode="HTML")
+            await bot.send_message(chat_id=DEV, text=f"[{obj.id}].\n{user_link}{text}\n{obj.count} ads left", parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
@@ -236,7 +255,8 @@ async def handle_photo(message: types.Message):
             session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
             session.commit()
         else:
-            await bot.send_photo(chat_id=DEV, photo=message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{caption if caption else ""}', parse_mode="HTML")
+            await bot.send_photo(chat_id=OWNER, photo=message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{caption if caption else ""}\n{obj.count} ads left', parse_mode="HTML")
+            await bot.send_photo(chat_id=DEV, photo=message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{caption if caption else ""}\n{obj.count} ads left', parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
@@ -244,6 +264,7 @@ async def handle_photo(message: types.Message):
             user_id=user_id,
             full_name=full_name,
             username=username,
+            text=caption,
             file_id=file_id,
             date=date
         )
