@@ -21,6 +21,12 @@ dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
 
+def ad_id_and_text(text):
+    ad_id = int(text[text.index('[') + 1:text.index('].\n')])
+    text = text[text.index(']\n') + 2:]
+    return ad_id, text
+
+
 def get_user_link(message: types.Message):
     """
     This function gets user as a link.
@@ -59,7 +65,7 @@ def captcha(member):
 
 
 @dp.callback_query_handler(lambda query: query.data.startswith(('right')))
-async def process_edit(query: types.CallbackQuery):
+async def process_right_query(query: types.CallbackQuery):
     _, member_id = query.data.split()
     user_id = query.from_user.id
     chat_id = query.message.chat.id
@@ -86,7 +92,7 @@ async def process_edit(query: types.CallbackQuery):
                                                                 'coconut', 'donut', 'taco', 'pizza',
                                                                 'salad', 'banana', 'chestnut', 'lollipop',
                                                                 'avocado', 'chicken', 'sandwich', 'cucumber')))
-async def process_edit(query: types.CallbackQuery):
+async def process_wrong_query(query: types.CallbackQuery):
     await query.answer(text='Неправильно!', show_alert=True)
 
 
@@ -102,14 +108,42 @@ async def on_shutdown(dp):
 
 
 @dp.message_handler(commands=['about'])
-async def cmd_start_help(message: types.Message) -> None:
+async def about_msg(message: types.Message) -> None:
     await message.answer('Simple bot to greet new chat memebers with anti-ad function')
 
 
 @dp.message_handler(commands=['chatid'])
-async def send_welcome(message: types.Message):
+async def chat_id_msg(message: types.Message):
     chat_id = message.chat.id
     await message.reply(f"Chat ID is\n{chat_id}")
+
+
+@dp.message_handler(commands=['status'])
+async def status_msg(message: types.Message):
+    if message.reply_to_message:
+        try:
+            ad_id, _ = ad_id_and_text(message.reply_to_message.text)
+        except:
+            ad_id, _ = ad_id_and_text(message.reply_to_message.caption)
+        session = Session()
+        obj = session.query(MessageModel).filter_by(id=ad_id).first()
+        await message.delete()
+        await message.answer(text=f'{obj.count} ads left')
+
+
+@dp.message_handler(commands=['spam'])
+async def status_msg(message: types.Message):
+    if message.reply_to_message:
+        try:
+            ad_id, _ = ad_id_and_text(message.reply_to_message.text)
+        except:
+            ad_id, _ = ad_id_and_text(message.reply_to_message.caption)
+
+        session = Session()
+        session.query(MessageModel).filter_by(id=ad_id).update({'count': -1})
+        session.commit()
+        await message.delete()
+        await message.answer(text='spammer')
 
 
 @dp.message_handler(content_types=["new_chat_members"])
@@ -156,7 +190,7 @@ async def handle_message(message: types.Message):
             session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
             session.commit()
         else:
-            await bot.send_message(chat_id=DEV, text=f"{user_link}{text}", parse_mode="HTML")
+            await bot.send_message(chat_id=DEV, text=f"[{obj.id}].\n{user_link}{text}", parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
@@ -198,7 +232,7 @@ async def handle_photo(message: types.Message):
             session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
             session.commit()
         else:
-            await bot.send_photo(chat_id=DEV, photo=message.photo[-1].file_id, caption=f'{user_link}{caption if caption else ""}', parse_mode="HTML")
+            await bot.send_photo(chat_id=DEV, photo=message.photo[-1].file_id, caption=f'[{obj.id}].\n{user_link}{caption if caption else ""}', parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
@@ -219,6 +253,24 @@ async def handle_photo(message: types.Message):
             else:
                 obj.delete()
         session.commit()
+
+
+@dp.message_handler()
+async def manage_count(message: types.Message):
+    if message.reply_to_message:
+        try:
+            new_count = int(message.text)
+            try:
+                ad_id, _ = ad_id_and_text(message.reply_to_message.text)
+            except:
+                ad_id, _ = ad_id_and_text(message.reply_to_message.caption)
+            session = Session()
+            session.query(MessageModel).filter_by(id=ad_id).update({'count': new_count})
+            session.commit()
+            await message.delete()
+            await message.answer(text=f'{new_count} ads left')
+        except:
+            await message.answer(text='reply to ad msg please')
 
 
 # if __name__ == '__main__':
