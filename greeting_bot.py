@@ -132,7 +132,7 @@ async def status_msg(message: types.Message):
 
 
 @dp.message_handler(commands=['spam'])
-async def status_msg(message: types.Message):
+async def spam_msg(message: types.Message):
     if message.reply_to_message:
         try:
             ad_id, _ = ad_id_and_text(message.reply_to_message.text)
@@ -186,9 +186,13 @@ async def handle_message(message: types.Message):
     session = Session()
     obj = session.query(MessageModel).filter_by(text=text).first()
     try:
-        if obj.count:
+        if obj.count > 0:
             session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
             session.commit()
+        elif obj.count < 0:
+            session.query(MessageModel).filter_by(id=obj.id).update({'count': obj.count-1})
+            session.commit()
+            await bot.delete_message(chat_id=chat_id, message_id=message_id)
         else:
             await bot.send_message(chat_id=DEV, text=f"[{obj.id}].\n{user_link}{text}", parse_mode="HTML")
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
