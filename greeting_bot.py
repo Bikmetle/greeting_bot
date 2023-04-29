@@ -122,7 +122,7 @@ async def on_shutdown(dp):
 
 @dp.message_handler(commands=['about'])
 async def about_msg(message: types.Message) -> None:
-    await message.answer('Simple bot to greet new chat memebers with anti-ad function')
+    await message.answer('Simple bot to greet new chat members with anti-ad function')
 
 
 @dp.message_handler(commands=['chatid'])
@@ -170,32 +170,30 @@ async def spam_msg(message: types.Message):
         await message.delete()
 
 
-@dp.message_handler(content_types=["new_chat_members"])
-async def join_group(message: types.Message):
+@dp.chat_member_handler()
+async def join_group(updated: types.ChatMemberUpdated):
     """
     Restrict sending messages for new group members
     """
-    members = message.new_chat_members
     try:
-        await message.delete()
-        for member in members:
-            if member.is_bot:
-                continue
+        if not updated.old_chat_member.is_member:
+            chat_id = updated.chat.id
             permissions = types.ChatPermissions(can_send_messages=False, can_send_media_messages=False)
-            await message.bot.restrict_chat_member(
-                message.chat.id,
-                member.id,
+            await updated.bot.restrict_chat_member(
+                chat_id,
+                updated.from_user.id,
                 permissions
             )
-            text, keyboard = captcha(member)
-            greeting = await message.answer(text=text, reply_markup=keyboard, parse_mode="HTML")
+            text, keyboard = captcha(updated.from_user)
+            greeting = await bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard, parse_mode="HTML")
             await asyncio.sleep(30)
-            await greeting.delete()
+            if not updated.new_chat_member.can_send_messages:
+                await greeting.delete()
 
     except Exception as e:
-        await bot.send_message(chat_id=OWNER, text=f'join_group {e}')
-        await bot.send_message(chat_id=DEV, text=f'join_group {e}')
-        
+        # await bot.send_message(chat_id=OWNER, text=f'join_group {e}')
+        await bot.send_message(chat_id=DEV, text=f'join_group {e}\n{updated}')
+    
 
 chat_filter = filters.ChatTypeFilter(types.ChatType.SUPERGROUP)
 @dp.message_handler(chat_filter)
@@ -223,7 +221,7 @@ async def handle_message(message: types.Message):
             text=f"[{obj.id}].\n{user_link}{text}\nосталось {obj.count}"
             await bot.send_message(chat_id=OWNER, text=text, parse_mode="HTML")
             await bot.send_message(chat_id=DEV, text=text, parse_mode="HTML")
-            await bot.delete_message(chat_id=chat_id, message_id=message_id)
+            # await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except:
         db_message = MessageModel(
             id = message_id,
@@ -281,7 +279,7 @@ async def handle_photo(message: types.Message):
         )
         session.add(db_message)
         ids_to_delete = [row.id for row in session.query(MessageModel).filter_by(user_id=user_id).all()]
-        while len(ids_to_delete) > 5:
+        while len(ids_to_delete) > 10:
             id = ids_to_delete.pop(0)
             obj = session.query(MessageModel).filter_by(id=id)
             if obj.first().count:
@@ -321,7 +319,6 @@ async def manage_count(message: types.Message):
 
 
 # if __name__ == '__main__':
-    # dp.register_update_handler(ChatMemberUpdated, ChatMembersJoin())
 #     executor.start_webhook(
 #         dispatcher=dp,
 #         webhook_path=WEBHOOK_PATH,
