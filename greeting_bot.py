@@ -1,5 +1,4 @@
 import logging
-import os
 import asyncio
 from random import randint, shuffle
 from aiogram import Bot, types, filters
@@ -7,7 +6,7 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
 from sql_model import MessageModel, Session
-from config import TOKEN, OWNER, DEV, WEBHOOK_HOST, WEBHOOK_PATH, WEBAPP_HOST, PRODUCTION
+from config import TOKEN, OWNER, DEV
 
 
 logging.basicConfig(level=logging.INFO)
@@ -103,17 +102,6 @@ async def process_right_query(query: types.CallbackQuery):
                                                                 'avocado', 'chicken', 'sandwich', 'cucumber')))
 async def process_wrong_query(query: types.CallbackQuery):
     await query.answer(text='Неправильно!', show_alert=True)
-
-
-async def on_startup(dp):
-    await bot.set_webhook(WEBHOOK_URL)
-    await bot.send_message(chat_id=DEV, text='Bot has been started')
-
-
-async def on_shutdown(dp):
-    logging.warning('Shutting down..')
-    await bot.send_message(chat_id=DEV, text='Bot has been stopped')
-    logging.warning('Bye!')
 
 
 @dp.message_handler(commands=['about'])
