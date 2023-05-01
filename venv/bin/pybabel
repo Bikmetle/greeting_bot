@@ -1,4 +1,4 @@
-#!/home/personal/aiogram_bots/test_webhook/venv/bin/python3
+#!/home/personal/aiogram_bots/test_greeting_bot/venv/bin/python3.7
 # -*- coding: utf-8 -*-
 import re
 import sys
