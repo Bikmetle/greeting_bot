@@ -1,3 +1,5 @@
+# https://api.telegram.org/bot5689965110:AAHh9u_UmzDzempg3V2pfo-iendJ2mygWq4/setWebhook?url=https://greetingbot.pythonanywhere.com/webhook
+# https://api.telegram.org/bot5689965110:AAHh9u_UmzDzempg3V2pfo-iendJ2mygWq4/getWebhookInfo
 import logging
 import os
 import asyncio
@@ -8,9 +10,9 @@ from aiogram.dispatcher import Dispatcher
 from aiogram.utils import executor
 from sql_model import MessageModel, Session
 from config import TOKEN, OWNER, DEV, WEBHOOK_HOST, WEBHOOK_PATH, WEBAPP_HOST, PRODUCTION
-from flask import Flask
+# from flask import Flask, request
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
@@ -23,15 +25,15 @@ dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
 
-@app.route('/')
-def hello_world():
-    return 'Hello from Flask!'
+# @app.route('/')
+# def hello_world():
+#     return 'Hello from Flask!'
 
-@app.route("/webhook", methods=["POST"])
-async def webhook(request):
-    update = types.Update.de_json(request.json, bot)
-    await dp.process_update(update)
-    return "OK"
+# @app.route("/webhook", methods=["POST"])
+# async def webhook():
+#     update = types.Update.de_json(await request.json, bot)
+#     await dp.process_update(update)
+#     return "ok", 200
 
 
 def ad_id_and_text(text):
