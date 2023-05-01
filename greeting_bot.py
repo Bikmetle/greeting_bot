@@ -201,7 +201,7 @@ async def join_group(updated: types.ChatMemberUpdated):
 
     except Exception as e:
         await bot.send_message(chat_id=DEV, text=f'join_group {e}\n{updated}')
-    
+
 
 chat_filter = filters.ChatTypeFilter(types.ChatType.SUPERGROUP)
 @dp.message_handler(chat_filter)
@@ -231,8 +231,8 @@ async def handle_message(message: types.Message):
             await bot.send_message(chat_id=DEV, text=msg, parse_mode="HTML")
             try:
                 await bot.delete_message(chat_id=chat_id, message_id=obj.id)
-            except:
-                print('text already deleted')
+            except Exception as e:
+                await bot.send_message(chat_id=DEV, text=f"can't delete msg {e}")
             db_message = MessageModel(
                 id = message_id,
                 user_id=user_id,
@@ -294,8 +294,8 @@ async def handle_photo(message: types.Message):
             await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
             try:
                 await bot.delete_message(chat_id=chat_id, message_id=obj.id)
-            except:
-                print("photo already deleted")
+            except Exception as e:
+                await bot.send_message(chat_id=DEV, text=f"can't delete msg {e}")
             db_message = MessageModel(
                 id = message_id,
                 user_id=user_id,
