@@ -82,13 +82,13 @@ async def process_right_query(query: types.CallbackQuery):
             "ВНЖ. НОТАРИУС @Kaganatski\nБайер. Золото @istanbuldan_kyz\nЧартерные билеты. Туры @venuspower\n" \
             "Недвижимость @anara_realestate\nПо поводу рекламы писать @Kaganatski"
         await bot.delete_message(chat_id, message_id)
-        # permissions = types.ChatPermissions(can_send_messages=True, can_send_media_messages=True)
-        await bot.promote_chat_member(chat_id, user_id)
-        # await query.message.bot.restrict_chat_member(
-        #     chat_id,
-        #     user_id,
-        #     permissions
-        # )
+        permissions = types.ChatPermissions(can_send_messages=True, can_send_media_messages=True)
+        # await bot.promote_chat_member(chat_id, user_id)
+        await query.message.bot.restrict_chat_member(
+            chat_id,
+            user_id,
+            permissions
+        )
         message = await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
         await asyncio.sleep(30)
         await message.delete()
