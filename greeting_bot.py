@@ -10,10 +10,6 @@ from sql_model import MessageModel, Session
 from config import TOKEN, OWNER, DEV, WEBHOOK_HOST, WEBHOOK_PATH, WEBAPP_HOST, PRODUCTION
 
 
-WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
-WEBAPP_PORT = int(os.environ.get('PORT', '8443'))
-
-
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
@@ -382,15 +378,4 @@ async def manage_count(message: types.Message):
 
 
 if __name__ == '__main__':
-    if PRODUCTION:
-        executor.start_webhook(
-            dispatcher=dp,
-            webhook_path=WEBHOOK_PATH,
-            on_startup=on_startup,
-            on_shutdown=on_shutdown,
-            skip_updates=True,
-            host=WEBAPP_HOST,
-            port=WEBAPP_PORT,
-        )
-    else:
-        executor.start_polling(dp)
+    executor.start_polling(dp)
