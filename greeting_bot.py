@@ -82,13 +82,16 @@ async def process_right_query(query: types.CallbackQuery):
             "ВНЖ. НОТАРИУС @Kaganatski\nБайер. Золото @istanbuldan_kyz\nЧартерные билеты. Туры @venuspower\n" \
             "Недвижимость @anara_realestate\nПо поводу рекламы писать @Kaganatski"
         await bot.delete_message(chat_id, message_id)
-        permissions = types.ChatPermissions(can_send_messages=True, can_send_media_messages=True)
-        # await bot.promote_chat_member(chat_id, user_id)
-        await query.message.bot.restrict_chat_member(
-            chat_id,
-            user_id,
-            permissions
-        )
+        try:
+            permissions = types.ChatPermissions(can_send_messages=True, can_send_media_messages=True)
+            # await bot.promote_chat_member(chat_id, user_id)
+            await query.message.bot.restrict_chat_member(
+                chat_id,
+                user_id,
+                permissions
+            )
+        except:
+            pass
         message = await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
         await asyncio.sleep(30)
         await message.delete()
@@ -164,15 +167,38 @@ async def join_group(updated: types.ChatMemberUpdated):
     """
     Restrict sending messages for new group members
     """
-    try:
-        if updated.old_chat_member.status == 'left' and updated.new_chat_member.is_chat_member():
-            chat_id = updated.chat.id
+    if updated.old_chat_member.status == 'left' and updated.new_chat_member.is_chat_member():
+        chat_id = updated.chat.id
+        try:
             permissions = types.ChatPermissions(can_send_messages=False, can_send_media_messages=False)
             await updated.bot.restrict_chat_member(
                 chat_id,
                 updated.from_user.id,
                 permissions
             )
+        except:
+            pass
+        text, keyboard = captcha(updated.from_user)
+        greeting = await bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard, parse_mode="HTML")
+        await asyncio.sleep(30)
+        try:
+            await greeting.delete()
+        except:
+            pass
+    elif updated.new_chat_member.status == 'restricted':
+        if updated.old_chat_member.status == 'member':
+            pass
+        elif updated.old_chat_member.is_member is False and updated.new_chat_member.is_member:
+            chat_id = updated.chat.id
+            try:
+                permissions = types.ChatPermissions(can_send_messages=False, can_send_media_messages=False)
+                await updated.bot.restrict_chat_member(
+                    chat_id,
+                    updated.from_user.id,
+                    permissions
+                )
+            except:
+                pass
             text, keyboard = captcha(updated.from_user)
             greeting = await bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard, parse_mode="HTML")
             await asyncio.sleep(30)
@@ -180,27 +206,6 @@ async def join_group(updated: types.ChatMemberUpdated):
                 await greeting.delete()
             except:
                 pass
-        elif updated.new_chat_member.status == 'restricted':
-            if updated.old_chat_member.status == 'member':
-                pass
-            elif updated.old_chat_member.is_member is False and updated.new_chat_member.is_member:
-                chat_id = updated.chat.id
-                permissions = types.ChatPermissions(can_send_messages=False, can_send_media_messages=False)
-                await updated.bot.restrict_chat_member(
-                    chat_id,
-                    updated.from_user.id,
-                    permissions
-                )
-                text, keyboard = captcha(updated.from_user)
-                greeting = await bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard, parse_mode="HTML")
-                await asyncio.sleep(30)
-                try:
-                    await greeting.delete()
-                except:
-                    pass
-
-    except Exception as e:
-        await bot.send_message(chat_id=DEV, text=f'join_group {e}\n{updated}')
 
 
 chat_filter = filters.ChatTypeFilter(types.ChatType.SUPERGROUP)
@@ -231,8 +236,8 @@ async def handle_message(message: types.Message):
             await bot.send_message(chat_id=DEV, text=msg, parse_mode="HTML")
             try:
                 await bot.delete_message(chat_id=chat_id, message_id=obj.id)
-            except Exception as e:
-                await bot.send_message(chat_id=DEV, text=f"can't delete msg {e}")
+            except:
+                pass
             db_message = MessageModel(
                 id = message_id,
                 user_id=user_id,
@@ -294,8 +299,8 @@ async def handle_photo(message: types.Message):
             await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
             try:
                 await bot.delete_message(chat_id=chat_id, message_id=obj.id)
-            except Exception as e:
-                await bot.send_message(chat_id=DEV, text=f"can't delete msg {e}")
+            except:
+                pass
             db_message = MessageModel(
                 id = message_id,
                 user_id=user_id,
