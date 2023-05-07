@@ -90,8 +90,8 @@ async def process_right_query(query: types.CallbackQuery):
                 user_id,
                 permissions
             )
-        except Exception as e:
-            await bot.send_message(chat_id=DEV, text=f'join_group {e}')
+        except:
+            pass
         message = await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
         await asyncio.sleep(30)
         await message.delete()
@@ -176,8 +176,8 @@ async def join_group(updated: types.ChatMemberUpdated):
                 updated.from_user.id,
                 permissions
             )
-        except Exception as e:
-            await bot.send_message(chat_id=DEV, text=f'join_group {e}')
+        except:
+            pass
         text, keyboard = captcha(updated.from_user)
         greeting = await bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard, parse_mode="HTML")
         await asyncio.sleep(30)
@@ -197,8 +197,8 @@ async def join_group(updated: types.ChatMemberUpdated):
                     updated.from_user.id,
                     permissions
                 )
-            except Exception as e:
-                await bot.send_message(chat_id=DEV, text=f'join_group {e}')
+            except:
+                pass
             text, keyboard = captcha(updated.from_user)
             greeting = await bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard, parse_mode="HTML")
             await asyncio.sleep(30)
@@ -236,8 +236,8 @@ async def handle_message(message: types.Message):
             await bot.send_message(chat_id=DEV, text=msg, parse_mode="HTML")
             try:
                 await bot.delete_message(chat_id=chat_id, message_id=obj.id)
-            except Exception as e:
-                await bot.send_message(chat_id=DEV, text=f"can't delete msg {e}")
+            except:
+                pass
             db_message = MessageModel(
                 id = message_id,
                 user_id=user_id,
@@ -299,8 +299,8 @@ async def handle_photo(message: types.Message):
             await bot.send_photo(chat_id=DEV, photo=photo, caption=caption, parse_mode="HTML")
             try:
                 await bot.delete_message(chat_id=chat_id, message_id=obj.id)
-            except Exception as e:
-                await bot.send_message(chat_id=DEV, text=f"can't delete msg {e}")
+            except:
+                pass
             db_message = MessageModel(
                 id = message_id,
                 user_id=user_id,
